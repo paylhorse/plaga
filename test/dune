@@ -1,0 +1,3 @@
+(test
+ (name plaga)
+ (libraries token lexer))
