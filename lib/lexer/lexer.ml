@@ -16,28 +16,66 @@ let read_char lexer =
   then lexer.ch <- '\000'
   else lexer.ch <- String.get lexer.input !(lexer.read_position);
   lexer.position := !(lexer.read_position);
-  lexer.read_position := !(lexer.read_position) + 1;
+  lexer.read_position := !(lexer.read_position) + 1;;
+
+let is_letter ch =
+  (Char.(<=) 'a' ch && Char.(<=) ch 'z' || Char.(<=) 'A' ch && Char.(<=) ch 'Z' || Char.(=) ch '_')
+
+let is_digit ch =
+  (Char.(<=) '0' ch && Char.(<=) ch '9')
+
+let read_identifier lexer =
+  let position = !(lexer.position) in
+  while is_letter lexer.ch do
+    read_char lexer;
+  done;
+  let ident = String.sub lexer.input ~pos:position ~len:(!(lexer.position) - position) in
+  print_endline "IDENTIFIER READ:";
+  print_endline ident;
+  ident
+
+let read_number lexer =
+  let position = !(lexer.position) in
+  while is_digit lexer.ch do
+    read_char lexer;
+  done;
+  let ident = String.sub lexer.input ~pos:position ~len:(!(lexer.position) - position) in
+  print_endline "NUMBER READ:";
+  print_endline ident;
+  ident
+
+let eat_whitespace lexer =
+  while Char.(=) lexer.ch ' ' || Char.(=) lexer.ch '\t' || Char.(=) lexer.ch '\n' || Char.(=) lexer.ch '\r' do
+    read_char lexer;
+  done;;
 
 let next_token lexer =
-  let tok =
-    let ch_as_string = Char.to_string lexer.ch in
-    match lexer.ch with
-    | '=' -> new_token Assign ch_as_string
-    | ';' -> new_token Semicolon ch_as_string
-    | '(' -> new_token LBrace ch_as_string
-    | ')' -> new_token RBrace ch_as_string
-    | ',' -> new_token Comma ch_as_string
-    | '+' -> new_token Plus  ch_as_string
-    | '{' -> new_token LBrace ch_as_string
-    | '}' -> new_token RBrace ch_as_string
-    | '\000' -> new_token EOF ""
-    | _ -> new_token Illegal ch_as_string
-  in
-  read_char lexer;
-  tok
+  eat_whitespace lexer;
+  if is_letter lexer.ch then
+    let literal = read_identifier lexer in
+    new_token (Some (lookup_ident literal)) literal
+  else if is_digit lexer.ch then
+    new_token (Some Int) (read_number lexer)
+  else
+    let ch_to_string = Char.to_string lexer.ch in
+    let tok = match lexer.ch with
+      | '=' -> new_token (Some Assign) ch_to_string
+      | ';' -> new_token (Some Semicolon) ch_to_string
+      | '(' -> new_token (Some LParen) ch_to_string
+      | ')' -> new_token (Some RParen) ch_to_string
+      | ',' -> new_token (Some Comma) ch_to_string
+      | '+' -> new_token (Some Plus)  ch_to_string
+      | '{' -> new_token (Some LBrace) ch_to_string
+      | '}' -> new_token (Some RBrace) ch_to_string
+      | '\000' -> new_token (Some EOF) ""
+      | _ -> new_token (Some Illegal) ch_to_string
+    in
+    read_char lexer;
+    tok
 
 let new_instance input =
-  let lexer = {
+  let lexer =
+  {
     input = input;
     position = ref 0;
     read_position = ref 0;

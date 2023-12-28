@@ -6,6 +6,14 @@ type token_type =
   | Int
   | Assign
   | Plus
+  | Minus
+  | Bang
+  | Asterisk
+  | Slash
+  | LT
+  | GT
+  | EQ
+  | Not_EQ
   | Comma
   | Semicolon
   | LParen
@@ -14,25 +22,60 @@ type token_type =
   | RBrace
   | Function
   | Let
+  | If
+  | Else
+  | True
+  | False
+  | Return
 
 (* integer or byte would give better performance, but string suffices *)
 let string_of_token_type = function
-  | Illegal -> "ILLEGAL"
-  | EOF -> "EOF"
-  | Ident -> "IDENT"
-  | Int -> "INT"
-  | Assign -> "="
-  | Plus -> "+"
-  | Comma -> ","
-  | Semicolon -> ";"
-  | LParen -> "("
-  | RParen -> ")"
-  | LBrace -> "{"
-  | RBrace -> "}"
-  | Function -> "FUNCTION"
-  | Let -> "LET"
+  | Some(Illegal) -> "ILLEGAL"
+  | Some(EOF) -> "EOF"
+  (* -- IDENTS + LITERALS -- *)
+  | Some(Ident) -> "IDENT"
+  | Some(Int) -> "INT"
+  (* -- OPERATORS -- *)
+  | Some(Assign) -> "="
+  | Some(Plus) -> "+"
+  | Some(Minus) -> "-"
+  | Some(Bang) -> "!"
+  | Some(Asterisk) -> "*"
+  | Some(Slash) -> "/"
+  | Some(LT) -> "<"
+  | Some(GT) -> ">"
+  | Some(EQ) -> "=="
+  | Some(Not_EQ) -> "!="
+  (* -- DELIMITERS -- *)
+  | Some(Comma) -> ","
+  | Some(Semicolon) -> ";"
+  | Some(LParen) -> "("
+  | Some(RParen) -> ")"
+  | Some(LBrace) -> "{"
+  | Some(RBrace) -> "}"
+  (* -- KEYWORDS -- *)
+  | Some(Function) -> "FUNCTION"
+  | Some(Let) -> "LET"
+  | Some(If) -> "IF"
+  | Some(Else) -> "ELSE"
+  | Some(True) -> "TRUE"
+  | Some(False) -> "FALSE"
+  | Some(Return) -> "RETURN"
+  | None -> ""
 
 type token = {
-  typ: token_type;
+  typ: token_type option;
   literal: string;
 }
+
+module StringMap = Map.Make (String)
+
+let keywords =
+  List.fold_left (fun map (key, value) -> StringMap.add key value map)
+  StringMap.empty
+  [("let", Let); ("fn", Function);]
+
+let lookup_ident ident =
+  match StringMap.find_opt ident keywords with
+  | Some(tok) -> tok
+  | None -> Ident
