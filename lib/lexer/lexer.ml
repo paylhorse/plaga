@@ -30,8 +30,7 @@ let read_identifier lexer =
     read_char lexer;
   done;
   let ident = String.sub lexer.input ~pos:position ~len:(!(lexer.position) - position) in
-  print_endline "IDENTIFIER READ:";
-  print_endline ident;
+  print_endline "IDENTIFIER READ:";  print_endline ident;
   ident
 
 let read_number lexer =
@@ -49,6 +48,10 @@ let eat_whitespace lexer =
     read_char lexer;
   done;;
 
+let peek_char lexer =
+  if !(lexer.read_position) >= String.length lexer.input then '\000'
+  else String.get lexer.input !(lexer.read_position)
+
 let next_token lexer =
   eat_whitespace lexer;
   if is_letter lexer.ch then
@@ -59,12 +62,28 @@ let next_token lexer =
   else
     let ch_to_string = Char.to_string lexer.ch in
     let tok = match lexer.ch with
-      | '=' -> new_token (Some Assign) ch_to_string
+      | '=' -> if Char.(=) (peek_char lexer) '=' then
+                 let ch = lexer.ch in
+                 read_char lexer;
+                 let literal = Char.to_string ch ^ Char.to_string lexer.ch in
+                 new_token (Some EQ) literal
+               else new_token (Some Assign) ch_to_string
+      | '+' -> new_token (Some Plus) ch_to_string
+      | '-' -> new_token (Some Minus) ch_to_string
+      | '!' -> if Char.(=) (peek_char lexer) '=' then
+                 let ch = lexer.ch in
+                 read_char lexer;
+                 let literal = Char.to_string ch ^ Char.to_string lexer.ch in
+                 new_token (Some Not_EQ) literal
+               else new_token (Some Bang) ch_to_string
+      | '/' -> new_token (Some Slash) ch_to_string
+      | '*' -> new_token (Some Asterisk) ch_to_string
+      | '<' -> new_token (Some LT) ch_to_string
+      | '>' -> new_token (Some GT) ch_to_string
       | ';' -> new_token (Some Semicolon) ch_to_string
       | '(' -> new_token (Some LParen) ch_to_string
       | ')' -> new_token (Some RParen) ch_to_string
       | ',' -> new_token (Some Comma) ch_to_string
-      | '+' -> new_token (Some Plus)  ch_to_string
       | '{' -> new_token (Some LBrace) ch_to_string
       | '}' -> new_token (Some RBrace) ch_to_string
       | '\000' -> new_token (Some EOF) ""

@@ -21,7 +21,7 @@ type token_type =
   | LBrace
   | RBrace
   | Function
-  | Let
+  | Bind
   | If
   | Else
   | True
@@ -55,7 +55,7 @@ let string_of_token_type = function
   | Some(RBrace) -> "}"
   (* -- KEYWORDS -- *)
   | Some(Function) -> "FUNCTION"
-  | Some(Let) -> "LET"
+  | Some(Bind) -> "BIND"
   | Some(If) -> "IF"
   | Some(Else) -> "ELSE"
   | Some(True) -> "TRUE"
@@ -73,7 +73,13 @@ module StringMap = Map.Make (String)
 let keywords =
   List.fold_left (fun map (key, value) -> StringMap.add key value map)
   StringMap.empty
-  [("let", Let); ("fn", Function);]
+  [("bind", Bind);
+   ("fn", Function);
+   ("true", True);
+   ("false", False);
+   ("if", If);
+   ("else", Else);
+   ("return", Return);]
 
 let lookup_ident ident =
   match StringMap.find_opt ident keywords with
