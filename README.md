@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">plaga</h1>
 <p align="center">
-<strong>A C-like programming language</strong>
+<strong>An abomination of a C-like programming language</strong>
 </p>
 
 ## FEATURES
