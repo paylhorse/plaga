@@ -6,6 +6,8 @@
 <strong>An abomination of a C-like programming language</strong>
 </p>
 
+## ABOUT
+
 ## FEATURES
 
 ## USAGE
