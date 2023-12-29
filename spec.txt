@@ -1,0 +1,7 @@
+--- VARIABLES ---
+
+BIND -> IDENT -> expression
+
+--- FUNCTIONS ---
+
+BIND -> IDENT -> FUNCTION -> LPAREN -> [IDENT -> COMMA] ... -> IDENT -> RPAREN -> LBRACE -> expression -> RBRACE

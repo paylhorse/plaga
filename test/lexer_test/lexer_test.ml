@@ -101,7 +101,7 @@ let test_next_token () =
     (Some(Semicolon), ";");
     (Some(EOF), "");
   ] in
-  let lexer = new_instance input in
+  let lexer = new_lexer input in
 
   List.iteri (fun i (expected_type, expected_literal) ->
     let token = next_token lexer in

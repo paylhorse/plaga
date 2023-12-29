@@ -30,7 +30,7 @@ let read_identifier lexer =
     read_char lexer;
   done;
   let ident = String.sub lexer.input ~pos:position ~len:(!(lexer.position) - position) in
-  print_endline "IDENTIFIER READ:";  print_endline ident;
+  (* print_endline "IDENTIFIER READ:";  print_endline ident; *)
   ident
 
 let read_number lexer =
@@ -39,8 +39,8 @@ let read_number lexer =
     read_char lexer;
   done;
   let ident = String.sub lexer.input ~pos:position ~len:(!(lexer.position) - position) in
-  print_endline "NUMBER READ:";
-  print_endline ident;
+  (* print_endline "NUMBER READ:"; *)
+  (* print_endline ident; *)
   ident
 
 let eat_whitespace lexer =
@@ -92,7 +92,7 @@ let next_token lexer =
     read_char lexer;
     tok
 
-let new_instance input =
+let new_lexer input =
   let lexer =
   {
     input = input;
