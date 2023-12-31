@@ -1,4 +1,5 @@
-(* TOKEN TYPES *)
+(* PLAGA TOKENS *)
+(* --- TOKEN TYPES --- *)
 type token_type =
   | Illegal
   | EOF
@@ -70,6 +71,7 @@ type token = {
 
 module StringMap = Map.Make (String)
 
+(* --- KEYWORDS --- *)
 let keywords =
   List.fold_left (fun map (key, value) -> StringMap.add key value map)
   StringMap.empty

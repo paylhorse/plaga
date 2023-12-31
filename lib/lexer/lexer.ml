@@ -1,3 +1,4 @@
+(* PLAGA LEXER *)
 open Core
 open Token
 
@@ -14,9 +15,9 @@ type lexer = {
 let read_char lexer =
   if !(lexer.read_position) >= String.length lexer.input
   then lexer.ch <- '\000'
-  else lexer.ch <- String.get lexer.input !(lexer.read_position);
+  else begin  lexer.ch <- String.get lexer.input !(lexer.read_position);
   lexer.position := !(lexer.read_position);
-  lexer.read_position := !(lexer.read_position) + 1;;
+  lexer.read_position := !(lexer.read_position) + 1 end
 
 let is_letter ch =
   (Char.(<=) 'a' ch && Char.(<=) ch 'z' || Char.(<=) 'A' ch && Char.(<=) ch 'Z' || Char.(=) ch '_')
@@ -39,14 +40,13 @@ let read_number lexer =
     read_char lexer;
   done;
   let ident = String.sub lexer.input ~pos:position ~len:(!(lexer.position) - position) in
-  (* print_endline "NUMBER READ:"; *)
-  (* print_endline ident; *)
+  (* print_endline "NUMBER READ:"; print_endline ident; *)
   ident
 
 let eat_whitespace lexer =
   while Char.(=) lexer.ch ' ' || Char.(=) lexer.ch '\t' || Char.(=) lexer.ch '\n' || Char.(=) lexer.ch '\r' do
     read_char lexer;
-  done;;
+  done
 
 let peek_char lexer =
   if !(lexer.read_position) >= String.length lexer.input then '\000'
