@@ -14,6 +14,8 @@ and statement =
 and expression =
   | Identifier of { token : token; value : string }
   | IntegerLiteral of { token : token; value : int }
+  | PrefixExpression of { token : token; operator : string; right: expression; }
+  | InfixExpression of { token : token; operator : string; left: expression; right: expression; }
   | EmptyExpression
 
 type program = {
@@ -30,6 +32,8 @@ let token_literal_of_statement = function
 let token_literal_of_expression = function
   | Identifier { token; _ } -> token.literal
   | IntegerLiteral { token; _ } -> token.literal
+  | PrefixExpression { token; _ } -> token.literal
+  | InfixExpression { token; _ } -> token.literal
   | EmptyExpression -> ""
 
 let program_token_literal p =
@@ -52,6 +56,10 @@ and string_of_expression = function
       Printf.sprintf "Identifier(value: %s)" value
   | IntegerLiteral { value; _ } ->
       Printf.sprintf "IntegerLiteral(value: %d)" value
+  | PrefixExpression { operator; _ } ->
+      Printf.sprintf "PrefixExpression(value: %s)" operator
+  | InfixExpression { operator; _ } ->
+      Printf.sprintf "IntegerLiteral(value: %s)" operator
   | EmptyExpression ->
       "EmptyExpression"
 
