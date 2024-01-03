@@ -12,4 +12,23 @@
 
 ## USAGE
 
+### Bind Statements
+```
+bind foo # 4;
+bind bar # 6;
+```
+
+### Return Statements
+```
+return foo + bar;
+foo + bar;
+```
+
+### Function Expressions
+```
+bind multiply # fn (x, y) { x * y; };
+bind foobar # multiply (foo, bar);
+fn (x, y) { x * y; } (foo, bar);
+```
+
 payl is typing...
