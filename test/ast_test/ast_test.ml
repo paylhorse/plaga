@@ -15,7 +15,7 @@ let test_string_representation () =
       }
     ]
   } in
-  let expected = "BindStatement(name: myVar, value: Identifier(value: anotherVar))" in
+  let expected = "\240\159\151\158  Bind Statement: (name: myVar, value: anotherVar)" in
   let program_str = string_of_program program in
   check string "String representation" expected program_str
 

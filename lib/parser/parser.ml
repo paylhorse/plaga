@@ -95,7 +95,7 @@ let peek_error parser expected_type =
               (string_of_token_type expected_type) actual_type in
   parser.errors <- parser.errors @ [msg]
 
-let expect_peek parser expected_type =
+let expect_consume parser expected_type =
   if peek_token_is parser expected_type then begin
     next_token parser;
     true
@@ -107,10 +107,10 @@ let expect_peek parser expected_type =
 (* --- PARSING --- *)
 let parse_bind_statement parser =
   let token = Option.get parser.curr_token in
-  if expect_peek parser Ident then begin
+  if expect_consume parser Ident then begin
     match parser.curr_token with
     | Some { literal = name; _ } ->
-      if expect_peek parser Assign then
+      if expect_consume parser Assign then
       while not (curr_token_is parser Semicolon) do
         next_token parser;
       done;
@@ -173,14 +173,18 @@ let parse_statement parser =
     parse_expression_statement parser
 
 let parse_program parser =
-  let rec helper statements =
+  print_endline "🖨  ------ PROGRAM ------";
+  let rec helper acc =
     if curr_token_is parser EOF then
-      statements
+      List.rev acc
     else
       let stmt = parse_statement parser in
       print_endline (string_of_statement stmt);
+      (match stmt with
+      | ExpressionStatement { expression; _ } -> print_endline (string_of_expression expression)
+      | _ -> print_endline "----");
       next_token parser;
-      helper (statements @ [stmt])
+      helper (stmt :: acc)
   in
   { statements = helper [] }
 
@@ -204,6 +208,99 @@ let parse_infix_expression parser left =
   let right = parse_expression parser ~precedence () in
   InfixExpression { token; operator; left; right; }
 
+let parse_boolean parser =
+  Boolean { token = Option.get parser.curr_token; value = curr_token_is parser True }
+
+let parse_grouped_expression parser =
+  next_token parser;
+  let exp = parse_expression parser () in
+  if (expect_consume parser RParen) != true then EmptyExpression
+  else exp
+
+let parse_block_statement parser =
+  let token = Option.get parser.curr_token in
+  print_endline token.literal;
+  next_token parser;
+  print_endline (Option.get parser.curr_token).literal;
+  let rec collect_statements acc =
+    if curr_token_is parser RBrace || curr_token_is parser EOF then
+      acc
+    else begin
+      let stmt = parse_statement parser in
+      next_token parser;
+      collect_statements (stmt :: acc)
+    end
+  in
+  let statements = collect_statements [] in
+  BlockStatement { token; statements = List.rev statements; }
+
+let parse_if_expression parser =
+  let token = Option.get parser.curr_token in
+  if not (expect_consume parser LParen) then
+    (parser.errors <- parser.errors @ ["Expected LParen"]; EmptyExpression)
+  else begin
+    next_token parser;
+    let condition = parse_expression parser () in
+    if not (peek_token_is parser RParen) then
+      (parser.errors <- parser.errors @ ["Expected RParen"]; EmptyExpression)
+    else begin
+      next_token parser;
+      if not (expect_consume parser LBrace) then
+        (parser.errors <- parser.errors @ ["Expected LBrace"]; EmptyExpression)
+      else begin
+        let consequence = parse_block_statement parser in
+        let alternative =
+          if peek_token_is parser Else then begin
+            next_token parser;
+            if expect_consume parser LBrace then
+              parse_block_statement parser
+            else
+              EmptyStatement  (* Error here! *)
+          end else
+            EmptyStatement  (* No Else *)
+        in
+        IfExpression { token; condition; consequence; alternative }
+      end
+    end
+  end
+
+let parse_function_parameters parser =
+  let rec collect_params acc =
+    if peek_token_is parser RParen then
+      (next_token parser; acc)
+    else begin
+      if List.length acc > 0 then
+        if not (expect_consume parser Comma) then
+          (parser.errors <- parser.errors @ ["Expected Comma between parameters"]; ())
+        else
+          next_token parser;
+      match parser.curr_token with
+      | Some { literal = name; _ } -> collect_params (acc @ [Identifier { token = Option.get parser.curr_token; value = name }])
+      | _ -> (parser.errors <- parser.errors @ ["Expected parameter identifier"]; acc)
+    end
+  in
+
+  if peek_token_is parser RParen then begin
+    next_token parser;
+    []
+  end else
+    collect_params []
+
+let parse_function_literal parser =
+  let token = Option.get parser.curr_token in
+  if not (expect_consume parser LParen) then
+    (parser.errors <- parser.errors @ ["Expected LParen"]; EmptyExpression)
+  else begin
+    next_token parser;
+    let parameters = parse_function_parameters parser in
+    if not (expect_consume parser LBrace) then
+      (parser.errors <- parser.errors @ ["Expected LBrace"]; EmptyExpression)
+    else begin
+      let body = parse_block_statement parser in
+      FunctionLiteral { token; parameters; body }
+    end
+  end
+
 (* --- CONSTRUCTION --- *)
 let new_parser lexer =
   let parser = {
@@ -220,6 +317,11 @@ let new_parser lexer =
   register_prefix parser Int (fun () -> parse_integer_literal parser);
   register_prefix parser Bang (fun () -> parse_prefix_expression parser);
   register_prefix parser Minus (fun () -> parse_prefix_expression parser);
+  register_prefix parser True (fun () -> parse_boolean parser);
+  register_prefix parser False (fun () -> parse_boolean parser);
+  register_prefix parser LParen (fun () -> parse_grouped_expression parser);
+  register_prefix parser If (fun () -> parse_if_expression parser);
+  register_prefix parser Function (fun () -> parse_function_literal parser);
   register_infix parser Plus (fun left -> parse_infix_expression parser left);
   register_infix parser Minus (fun left -> parse_infix_expression parser left);
   register_infix parser Asterisk (fun left -> parse_infix_expression parser left);
