@@ -20,6 +20,7 @@ and expression =
   | Boolean of { token : token; value : bool; }
   | IfExpression of { token : token; condition : expression; consequence : statement; alternative : statement; }
   | FunctionLiteral of { token : token; parameters : expression list; body : statement }
+  | CallExpression of { token : token; func : expression; arguments : expression list }
   | EmptyExpression
 
 type program = {
@@ -42,6 +43,7 @@ let token_literal_of_expression = function
   | Boolean { token; _ } -> token.literal
   | IfExpression { token; _ } -> token.literal
   | FunctionLiteral { token; _ } -> token.literal
+  | CallExpression { token; _ } -> token.literal
   | EmptyExpression -> "o_o"
 
 let program_token_literal p =
@@ -82,6 +84,11 @@ and string_of_expression = function
     let params = String.concat ", " param_strings in
     let body_str = string_of_statement body in
     "-> Function Literal: (parameters: [" ^ params ^ "], body: " ^ body_str ^ ")"
+  | CallExpression { func; arguments; _ } ->
+    let arg_strings = List.map (fun param -> string_of_expression param) arguments in
+    let args = String.concat ", " arg_strings in
+    let func_str = string_of_expression func in
+    "-> Call Expression: (arguments: [" ^ args ^ "], body: " ^ func_str ^ ")"
   | EmptyExpression ->
     "-> Empty Expression o_o"
 
@@ -89,3 +96,11 @@ let string_of_program program =
   let statement_strings = List.map string_of_statement program.statements in
   let str = String.concat "\n" statement_strings in
   str
+
+let print_program program =
+  print_endline "🖨  ------ PROGRAM ------";
+  List.iter (fun stmt ->
+    print_endline (string_of_statement stmt);
+    (match stmt with
+    | ExpressionStatement { expression; _ } -> print_endline (string_of_expression expression)
+    | _ -> ());) program.statements

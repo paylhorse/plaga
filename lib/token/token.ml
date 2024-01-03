@@ -37,7 +37,7 @@ let string_of_token_type = function
   | Some(Ident) -> "IDENT"
   | Some(Int) -> "INT"
   (* -- OPERATORS -- *)
-  | Some(Assign) -> "="
+  | Some(Assign) -> "#"
   | Some(Plus) -> "+"
   | Some(Minus) -> "-"
   | Some(Bang) -> "!"
@@ -45,7 +45,7 @@ let string_of_token_type = function
   | Some(Slash) -> "/"
   | Some(LT) -> "<"
   | Some(GT) -> ">"
-  | Some(EQ) -> "=="
+  | Some(EQ) -> "="
   | Some(Not_EQ) -> "!="
   (* -- DELIMITERS -- *)
   | Some(Comma) -> ","
@@ -76,7 +76,7 @@ let keywords =
   List.fold_left (fun map (key, value) -> StringMap.add key value map)
   StringMap.empty
   [("bind", Bind);
-   ("fn", Function);
+   ("func", Function);
    ("true", True);
    ("false", False);
    ("if", If);

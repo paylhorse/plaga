@@ -62,14 +62,10 @@ let next_token lexer =
   else
     let ch_to_string = Char.to_string lexer.ch in
     let tok = match lexer.ch with
-      | '=' -> if Char.(=) (peek_char lexer) '=' then
-                 let ch = lexer.ch in
-                 read_char lexer;
-                 let literal = Char.to_string ch ^ Char.to_string lexer.ch in
-                 new_token (Some EQ) literal
-               else new_token (Some Assign) ch_to_string
+      | '#' -> new_token (Some Assign) ch_to_string
       | '+' -> new_token (Some Plus) ch_to_string
       | '-' -> new_token (Some Minus) ch_to_string
+      | '=' -> new_token (Some EQ) ch_to_string
       | '!' -> if Char.(=) (peek_char lexer) '=' then
                  let ch = lexer.ch in
                  read_char lexer;

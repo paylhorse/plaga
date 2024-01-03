@@ -5,7 +5,7 @@ open Ast
 
 type precedence =
   | Lowest
-  | Equals      (* == or != *)
+  | Equals      (* = or != *)
   | LessGreater (* > or < *)
   | Sum         (* + or - *)
   | Product     (* * or / *)
@@ -26,6 +26,7 @@ let token_precedence = function
   | LT | GT -> LessGreater
   | Plus | Minus -> Sum
   | Asterisk | Slash -> Product
+  | LParen -> Call
   | _ -> Lowest
 
 type prefix_parse_fn = unit -> expression
@@ -105,28 +106,6 @@ let expect_consume parser expected_type =
   end
 
 (* --- PARSING --- *)
-let parse_bind_statement parser =
-  let token = Option.get parser.curr_token in
-  if expect_consume parser Ident then begin
-    match parser.curr_token with
-    | Some { literal = name; _ } ->
-      if expect_consume parser Assign then
-      while not (curr_token_is parser Semicolon) do
-        next_token parser;
-      done;
-      BindStatement { token; name; value = EmptyExpression }
-    | _ -> EmptyStatement
-  end else
-    EmptyStatement
-
-let parse_return_statement parser =
-  let token = Option.get parser.curr_token in
-  next_token parser;
-  while not (curr_token_is parser Semicolon) do
-    next_token parser;
-  done;
-  ReturnStatement { token; return_value = EmptyExpression }
-
 (* Behold, Pratt Parsing *)
 let parse_expression parser ?(precedence=Lowest) () =
   let left_exp =
@@ -155,6 +134,31 @@ let parse_expression parser ?(precedence=Lowest) () =
   in
   parse_infix left_exp
 
+let parse_bind_statement parser =
+  let token = Option.get parser.curr_token in
+  if expect_consume parser Ident then begin
+    match parser.curr_token with
+    | Some { literal = name; _ } ->
+      if expect_consume parser Assign then begin
+        next_token parser;
+        let value = parse_expression parser ~precedence:Lowest () in
+        if not (expect_consume parser Semicolon) then
+          (parser.errors <- parser.errors @ ["Expected Semicolon"]; EmptyStatement)
+        else
+          BindStatement { token; name; value }
+      end else EmptyStatement
+    | _ -> EmptyStatement
+  end else EmptyStatement
+
+let parse_return_statement parser =
+  let token = Option.get parser.curr_token in
+  next_token parser;
+  let return_value = parse_expression parser ~precedence:Lowest () in
+  if not (expect_consume parser Semicolon) then
+    (parser.errors <- parser.errors @ ["Expected Semicolon"]; EmptyStatement)
+  else
+    ReturnStatement { token; return_value }
+
 let parse_expression_statement parser =
   let stmt = ExpressionStatement {
     token = Option.get parser.curr_token;
@@ -173,16 +177,11 @@ let parse_statement parser =
     parse_expression_statement parser
 
 let parse_program parser =
-  print_endline "🖨  ------ PROGRAM ------";
   let rec helper acc =
     if curr_token_is parser EOF then
       List.rev acc
     else
       let stmt = parse_statement parser in
-      print_endline (string_of_statement stmt);
-      (match stmt with
-      | ExpressionStatement { expression; _ } -> print_endline (string_of_expression expression)
-      | _ -> print_endline "----");
       next_token parser;
       helper (stmt :: acc)
   in
@@ -219,9 +218,7 @@ let parse_grouped_expression parser =
 
 let parse_block_statement parser =
   let token = Option.get parser.curr_token in
-  print_endline token.literal;
   next_token parser;
-  print_endline (Option.get parser.curr_token).literal;
   let rec collect_statements acc =
     if curr_token_is parser RBrace || curr_token_is parser EOF then
       acc
@@ -301,6 +298,33 @@ let parse_function_literal parser =
     end
   end
 
+let parse_call_arguments parser =
+  let rec collect_args acc =
+    if peek_token_is parser RParen then
+      (next_token parser; acc)
+    else begin
+      if List.length acc > 0 then
+        if not (expect_consume parser Comma) then
+          (parser.errors <- parser.errors @ ["Expected Comma between arguments"]; ())
+        else
+          next_token parser;
+
+      let arg = parse_expression parser ~precedence:Lowest () in
+      collect_args (acc @ [arg])
+    end
+  in
+
+  if peek_token_is parser RParen then begin
+    next_token parser;
+    []
+  end else begin
+    next_token parser;
+    collect_args []
+  end
+
+let parse_call_expression parser func =
+  CallExpression { token = Option.get parser.curr_token; func; arguments = parse_call_arguments parser; }
+
 (* --- CONSTRUCTION --- *)
 let new_parser lexer =
   let parser = {
@@ -330,4 +354,5 @@ let new_parser lexer =
   register_infix parser Not_EQ (fun left -> parse_infix_expression parser left);
   register_infix parser LT (fun left -> parse_infix_expression parser left);
   register_infix parser GT (fun left -> parse_infix_expression parser left);
+  register_infix parser LParen (fun func -> parse_call_expression parser func);
   parser

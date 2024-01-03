@@ -44,52 +44,58 @@ let test_infix_expression expression left_expected operator_expected right_expec
 
 (* --- BIND TEST --- *)
 let test_bind_statements () =
-  let input =
-    "bind x = 4;
-     bind y = 10;
-     bind foobar = 646464;"
-  in
-  let lexer = new_lexer input in
-  let parser = new_parser lexer in
-  let program = parse_program parser in
+  let bind_tests = [
+    ("bind x # 4;", "x", (`Int 4));
+    ("bind y # true;", "y", (`Bool true));
+    ("bind foobar # y;", "foobar", (`String "y"));
+  ] in
 
-  check_parser_errors parser;
+  List.iter (fun (input, expected_name, expected_value) ->
+    let lexer = new_lexer input in
+    let parser = new_parser lexer in
+    let program = parse_program parser in
 
-  let expected_identifiers = ["x"; "y"; "foobar"] in
-  let num_statements = List.length program.statements in
-  let num_expected = List.length expected_identifiers in
-  Alcotest.(check int) "Number of statements" num_expected num_statements;
+    let errors = get_errors parser in
+    (match errors with
+    | [] -> ()
+    | _ -> Alcotest.fail ("Parser errors: " ^ String.concat ", " errors));
 
-  List.iteri (fun i expected_id ->
-    match List.nth program.statements i with
-    | BindStatement { name; _ } ->
-      Alcotest.(check string) ("Identifier in statement " ^ string_of_int i) expected_id name
-    | _ -> Alcotest.fail ("Statement " ^ string_of_int i ^ " is not a BindStatement")
-  ) expected_identifiers
+    let num_statements = List.length program.statements in
+    Alcotest.(check int) "Number of statements" 1 num_statements;
+
+    match program.statements with
+    | [BindStatement { name; value; _ }] ->
+      Alcotest.(check string) "Name" expected_name name;
+      test_literal_expression value expected_value;
+    | _ -> Alcotest.fail "Statement is not a BindStatement"
+  ) bind_tests
 
 (* --- RETURN TEST --- *)
 let test_return_statements () =
-  let input =
-    "return 4;
-     return 10;
-     return 646464;"
-  in
-  let lexer = new_lexer input in
-  let parser = new_parser lexer in
-  let program = parse_program parser in
+  let return_tests = [
+    ("return 4;", (`Int 4));
+    ("return true;", (`Bool true));
+    ("return foobar;", (`String "foobar"));
+  ] in
 
-  check_parser_errors parser;
+  List.iter (fun (input, expected_value) ->
+    let lexer = new_lexer input in
+    let parser = new_parser lexer in
+    let program = parse_program parser in
 
-  let num_expected = 3
-  in
-  let num_statements = List.length program.statements in
-  Alcotest.(check int) "Number of statements" num_expected num_statements;
+    let errors = get_errors parser in
+    (match errors with
+    | [] -> ()
+    | _ -> Alcotest.fail ("Parser errors: " ^ String.concat ", " errors));
 
-  List.iteri (fun i stmt ->
-    match stmt with
-    | ReturnStatement _ -> ()
-    | _ -> Alcotest.fail ("Statement " ^ string_of_int i ^ " is not a ReturnStatement")
-  ) program.statements
+    let num_statements = List.length program.statements in
+    Alcotest.(check int) "Number of statements" 1 num_statements;
+
+    match program.statements with
+    | [ReturnStatement { return_value; _ }] ->
+      test_literal_expression return_value expected_value;
+    | _ -> Alcotest.fail "Statement is not a ReturnStatement"
+  ) return_tests
 
 (* --- IDENT TEST --- *)
 let test_identifier_expression () =
@@ -178,7 +184,7 @@ let test_parsing_infix_expressions () =
     ("4 / 4;", 4, "/", 4);
     ("4 > 4;", 4, ">", 4);
     ("4 < 4;", 4, "<", 4);
-    ("4 == 4;", 4, "==", 4);
+    ("4 = 4;", 4, "=", 4);
     ("4 != 4;", 4, "!=", 4);
   ] in
 
@@ -296,7 +302,7 @@ let test_if_else_expression () =
 
 (* --- FUNCTION LITERAL TEST --- *)
 let test_function_literal_expression () =
-  let input = "fn(x, y) { x + y; }" in
+  let input = "func(x, y) { x + y; }" in
   let lexer = new_lexer input in
   let parser = new_parser lexer in
   let program = parse_program parser in
@@ -336,6 +342,48 @@ let test_function_literal_expression () =
       | _ -> Alcotest.fail "Expression is not a FunctionLiteral")
   | _ -> Alcotest.fail "Not a single ExpressionStatement"
 
+(* --- CALL EXPRESSION TEST --- *)
+let test_call_expression () =
+  let input = "add(1, 2 * 3, 4 + 5);" in
+  let lexer = new_lexer input in
+  let parser = new_parser lexer in
+  let program = parse_program parser in
+
+  check_parser_errors parser;
+
+  let num_expected = 1 in
+  let num_statements = List.length program.statements in
+  Alcotest.(check int) "Number of statements" num_expected num_statements;
+
+  match program.statements with
+  | [ExpressionStatement { expression; _ }] -> (
+      match expression with
+      | CallExpression { func; arguments; _ } ->
+        Alcotest.(check int) "Number of arguments" 3 (List.length arguments);
+        (match func with
+        | Identifier { value; _ } -> Alcotest.(check string) "Function name" "add" value
+        | _ -> Alcotest.fail "Function is not an Identifier");
+
+        (match List.nth arguments 0 with
+        | IntegerLiteral { value; _ } -> Alcotest.(check int) "First argument" 1 value
+        | _ -> Alcotest.fail "First argument is not an IntegerLiteral");
+
+        (match List.nth arguments 1 with
+        | InfixExpression { left; operator; right; _ } ->
+          test_literal_expression left (`Int 2);
+          Alcotest.(check string) "Operator in first infix expression" "*" operator;
+          test_literal_expression right (`Int 3);
+        | _ -> Alcotest.fail "Second argument is not an InfixExpression");
+
+        (match List.nth arguments 2 with
+        | InfixExpression { left; operator; right; _ } ->
+          test_literal_expression left (`Int 4);
+          Alcotest.(check string) "Operator in second infix expression" "+" operator;
+          test_literal_expression right (`Int 5);
+        | _ -> Alcotest.fail "Third argument is not an InfixExpression");
+      | _ -> Alcotest.fail "Expression is not a CallExpression")
+  | _ -> Alcotest.fail "Not a single ExpressionStatement"
+
 let () =
   let open Alcotest in
   run "Parser Tests" [
@@ -349,4 +397,5 @@ let () =
     "IF", [test_case "Parsing if expressions" `Quick test_if_expression];
     "IF ELSE", [test_case "Parsing if else expressions" `Quick test_if_else_expression];
     "FUNCTION LITERAL", [test_case "Parsing function literal expressions" `Quick test_function_literal_expression];
+    "CALL EXPRESSION", [test_case "Parsing call expressions" `Quick test_call_expression];
   ]

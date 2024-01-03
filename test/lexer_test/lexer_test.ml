@@ -5,14 +5,14 @@ let () = print_endline "Starting Lexer Test..."
 
 let test_next_token () =
   let input =
-    "bind four = 4;
-    bind ten = 10;
+    "bind four # 4;
+    bind ten # 10;
 
-    bind add = fn(x, y) {
+    bind add # func(x, y) {
       x + y;
     };
 
-    bind result = add(four, ten);
+    bind result # add(four, ten);
     !-/*5;
     5 < 10 > 5;
 
@@ -22,24 +22,24 @@ let test_next_token () =
       return false;
     }
 
-    10 == 10;
+    10 = 10;
     10 != 9;"
   in
   let expected_tokens = [
     (Some(Bind), "bind");
     (Some(Ident), "four");
-    (Some(Assign), "=");
+    (Some(Assign), "#");
     (Some(Int), "4");
     (Some(Semicolon), ";");
     (Some(Bind), "bind");
     (Some(Ident), "ten");
-    (Some(Assign), "=");
+    (Some(Assign), "#");
     (Some(Int), "10");
     (Some(Semicolon), ";");
     (Some(Bind), "bind");
     (Some(Ident), "add");
-    (Some(Assign), "=");
-    (Some(Function), "fn");
+    (Some(Assign), "#");
+    (Some(Function), "func");
     (Some(LParen), "(");
     (Some(Ident), "x");
     (Some(Comma), ",");
@@ -54,7 +54,7 @@ let test_next_token () =
     (Some(Semicolon), ";");
     (Some(Bind), "bind");
     (Some(Ident), "result");
-    (Some(Assign), "=");
+    (Some(Assign), "#");
     (Some(Ident), "add");
     (Some(LParen), "(");
     (Some(Ident), "four");
@@ -92,7 +92,7 @@ let test_next_token () =
     (Some(Semicolon), ";");
     (Some(RBrace), "}");
     (Some(Int), "10");
-    (Some(EQ), "==");
+    (Some(EQ), "=");
     (Some(Int), "10");
     (Some(Semicolon), ";");
     (Some(Int), "10");
